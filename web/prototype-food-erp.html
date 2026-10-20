@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prototype Food ERP v3.0 — Dual-Plane Owner Admin & Operational Suite</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    .apple-spring {
+      transition: all 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .bento-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.16), 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+    .bento-subtle {
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+    .owner-nav-active {
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(99, 102, 241, 0.15));
+      border: 1px solid rgba(14, 165, 233, 0.45);
+      color: var(--foreground);
+      font-weight: 600;
+    }
+    .ops-nav-active {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(20, 184, 166, 0.15));
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      color: var(--foreground);
+      font-weight: 600;
+    }
+    .role-pill-active {
+      background: var(--primary);
+      color: var(--primary-foreground);
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .vp-desktop { width: 100%; max-width: 1420px; }
+    .vp-tablet { width: 834px; max-width: 100%; margin: 0 auto; border: 8px solid var(--border); border-radius: 32px; overflow: hidden; }
+    .vp-mobile { width: 393px; max-width: 100%; margin: 0 auto; border: 9px solid var(--border); border-radius: 40px; overflow: hidden; }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-2 md:p-5 select-none">
+
+  <!-- ========================================================================= -->
+  <!-- TOP GLOBAL ORCHESTRATOR BAR: ROLE SWITCHER (OWNER vs SALA/CUCINA) + DEVICE-->
+  <!-- ========================================================================= -->
+  <div class="max-w-[1420px] mx-auto mb-3.5 bento-card px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-1.5">
+        <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+        <span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>
+        <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+      </div>
+      <div class="h-4 w-[1px] bg-[var(--border)]"></div>
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm"></div>
+        <span class="text-xs font-bold tracking-tight">Prototype Food ERP v3.0</span>
+      </div>
+    </div>
+
+    <!-- PRIMARY DUAL-ENVIRONMENT SWITCHER (Owner Admin Control vs Operational Sala/Cucina) -->
+    <div class="flex items-center gap-1.5 bg-[var(--secondary)] p-1 rounded-2xl border border-[var(--border)] text-xs">
+      <button onclick="switchEnvironment('owner')" id="env-btn-owner" class="px-3.5 py-1.5 rounded-xl apple-spring role-pill-active">
+        👑 1. Owner & Admin Control (Magazzino, Procurement, Finanza, Market Gaps)
+      </button>
+      <button onclick="switchEnvironment('ops')" id="env-btn-ops" class="px-3.5 py-1.5 rounded-xl apple-spring text-[var(--muted-foreground)] font-medium">
+        ⚡ 2. App Operativa Sala, QR & Cucina KDS (Zero-Friction)
+      </button>
+    </div>
+
+    <!-- DEVICE FORMAT SWITCHER (Sito Desktop / Tablet iPad / Smartphone) -->
+    <div class="flex items-center gap-1 bg-[var(--secondary)] p-1 rounded-xl border border-[var(--border)] text-xs">
+      <button onclick="setFormat('desktop')" id="fmt-desktop" class="px-2.5 py-1 rounded-lg font-semibold bg-[var(--card)] text-[var(--foreground)] shadow-sm">🖥️ Sito</button>
+      <button onclick="setFormat('tablet')" id="fmt-tablet" class="px-2.5 py-1 rounded-lg text-[var(--muted-foreground)]">📟 Tablet</button>
+      <button onclick="setFormat('mobile')" id="fmt-mobile" class="px-2.5 py-1 rounded-lg text-[var(--muted-foreground)]">📱 App Mobile</button>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN SHELL                                                                -->
+  <!-- ========================================================================= -->
+  <div id="master-shell" class="mx-auto vp-desktop bento-card overflow-hidden apple-spring">
+
+    <!-- Toast Notification Banner -->
+    <div id="global-toast" class="hidden m-4 mb-0 px-4 py-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 text-xs font-medium flex items-center justify-between">
+      <span id="global-toast-text">Sincronizzazione Event Bus completata.</span>
+      <button onclick="document.getElementById('global-toast').classList.add('hidden')" class="underline font-bold ml-4">OK</button>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- ENVIRONMENT 1: 👑 OWNER & ADMIN CONTROL ERP (Back-Office & Strategy)    -->
+    <!-- ======================================================================= -->
+    <div id="plane-owner" class="flex flex-col md:flex-row">
+
+      <!-- Left Enterprise Sidebar for Owner/Admin -->
+      <aside class="w-full md:w-64 lg:w-72 shrink-0 bg-[var(--secondary)]/45 border-b md:border-b-0 md:border-r border-[var(--border)] p-4 flex flex-col justify-between">
+        <div class="space-y-4">
+          <div class="p-3 rounded-2xl bg-[var(--card)] border border-[var(--border)] flex items-center justify-between">
+            <div>
+              <div class="text-xs font-bold text-sky-400 uppercase tracking-wider">Admin Control Plane</div>
+              <div class="text-sm font-bold mt-0.5">Vista Titolare & CFO</div>
+              <div class="text-xs text-[var(--muted-foreground)]">Web Desktop & App Owner</div>
+            </div>
+            <span class="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-500 text-xs font-bold">Sync</span>
+          </div>
+
+          <div class="space-y-1.5 text-xs">
+            <div class="px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Reparti Gestionali Owner</div>
+
+            <button onclick="openOwnerTab('tower')" id="otab-tower" class="owner-nav-btn owner-nav-active w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between apple-spring">
+              <span>🧭 1. Executive Control Tower</span>
+              <span class="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 font-semibold">Live</span>
+            </button>
+
+            <button onclick="openOwnerTab('inventory')" id="otab-inventory" class="owner-nav-btn w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between apple-spring text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+              <span>📦 2. Magazzino & Ricette BoM</span>
+              <span id="obadge-stock" class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold">2 Alert</span>
+            </button>
+
+            <button onclick="openOwnerTab('procurement')" id="otab-procurement" class="owner-nav-btn w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between apple-spring text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+              <span>🚚 3. Procurement & AI Broker</span>
+              <span class="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-semibold">B2B</span>
+            </button>
+
+            <button onclick="openOwnerTab('finance')" id="otab-finance" class="owner-nav-btn w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between apple-spring text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+              <span>📈 4. Finanza P&L, SDI & HR</span>
+              <span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold">CFO</span>
+            </button>
+
+            <div class="pt-3 px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-amber-400">Innovazione & Vantaggio</div>
+
+            <button onclick="openOwnerTab('marketgaps')" id="otab-marketgaps" class="owner-nav-btn w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between apple-spring text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-amber-500/30 bg-amber-500/5">
+              <span>🚀 5. I 5 Market Gap AI</span>
+              <span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">Unico</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Bridge to Operational App -->
+        <div class="mt-6 p-3 rounded-2xl bg-[var(--card)] border border-[var(--border)] text-xs space-y-2">
+          <div class="text-[var(--muted-foreground)]">Flusso Comande Sala/Cucina:</div>
+          <button onclick="switchEnvironment('ops')" class="w-full py-2 px-3 rounded-xl bg-[var(--secondary)] border border-[var(--border)] font-semibold hover:border-emerald-500/50 apple-spring">
+            ⚡ Passa all'App Sala/QR/KDS →
+          </button>
+        </div>
+      </aside>
+
+      <!-- Right Canvas for Owner Admin Control -->
+      <main class="flex-1 p-4 md:p-6 space-y-5">
+
+        <!-- Owner Executive KPI Ribbon -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div class="bento-subtle p-4">
+            <div class="text-xs text-[var(--muted-foreground)] flex justify-between">
+              <span>Ricavi Sala & QR (Live)</span>
+              <span class="text-emerald-500 font-semibold">+18.2%</span>
+            </div>
+            <div id="own-kpi-rev" class="text-xl font-bold mt-1">€ 3.420,00</div>
+            <div class="text-xs text-[var(--muted-foreground)] mt-1">Ticket medio QR con AI Sommelier: € 56,40</div>
+          </div>
+
+          <div class="bento-subtle p-4">
+            <div class="text-xs text-[var(--muted-foreground)] flex justify-between">
+              <span>Food Cost Teorico / Reale</span>
+              <span class="text-sky-400 font-semibold">Target &lt;28%</span>
+            </div>
+            <div id="own-kpi-fc" class="text-xl font-bold mt-1">24.8% <span class="text-xs font-normal text-[var(--muted-foreground)]">/ 25.4%</span></div>
+            <div id="own-kpi-cogs" class="text-xs text-[var(--muted-foreground)] mt-1">COGS: € 848,16 • Sfridi: € 22,00</div>
+          </div>
+
+          <div class="bento-subtle p-4">
+            <div class="text-xs text-[var(--muted-foreground)] flex justify-between">
+              <span>Risparmio AI Broker Oggi</span>
+              <span class="text-indigo-400 font-semibold">Market Gap #2</span>
+            </div>
+            <div id="own-kpi-saved" class="text-xl font-bold text-indigo-400 mt-1">€ 142,50</div>
+            <div class="text-xs text-[var(--muted-foreground)] mt-1">Switch automatico listini fornitori</div>
+          </div>
+
+          <div class="bento-subtle p-4">
+            <div class="text-xs text-[var(--muted-foreground)] flex justify-between">
+              <span>EBITDA / Utile Netto Oggi</span>
+              <span class="text-emerald-500 font-semibold">Netto 33%</span>
+            </div>
+            <div id="own-kpi-ebitda" class="text-xl font-bold text-emerald-500 mt-1">€ 1.129,84</div>
+            <div class="text-xs text-[var(--muted-foreground)] mt-1">Prime Cost (Food+Labor): 54.0%</div>
+          </div>
+        </div>
+
+        <!-- OWNER TAB 1: EXECUTIVE CONTROL TOWER -->
+        <section id="oview-tower" class="owner-section space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-[var(--border)]">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-wider text-sky-400">Owner Control Plane • Supervisione in Tempo Reale</div>
+              <h2 class="text-base font-bold">1. Executive Control Tower — Cosa sta succedendo nel ristorante adesso</h2>
+            </div>
+            <button onclick="openOwnerTab('marketgaps')" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 text-white text-xs font-semibold shadow-sm">
+              🚀 Esplora i 5 Market Gap Inclusi →
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 text-xs">
+            <div class="bento-subtle p-4 space-y-2.5">
+              <div class="font-bold text-sm text-emerald-400">⚡ Flusso Live da App Sala & Cucina</div>
+              <p class="text-[var(--muted-foreground)]">
+                L'app operativa sta gestendo 6 tavoli attivi e <span id="tower-kds-count" class="font-bold text-[var(--foreground)]">3 comande</span> nel KDS. Ogni piatto venduto aggiorna qui sotto magazzino e bilancio.
+              </p>
+              <button onclick="switchEnvironment('ops')" class="w-full py-2 rounded-xl bg-[var(--card)] border border-[var(--border)] font-semibold">
+                Apri Terminale Sala / QR / KDS →
+              </button>
+            </div>
+
+            <div class="bento-subtle p-4 space-y-2.5">
+              <div class="font-bold text-sm text-indigo-400">🚚 AI Multi-Vendor Procurement</div>
+              <p class="text-[var(--muted-foreground)]">
+                2 materie prime sotto-scorta. Il broker AI ha confrontato Longino, Metro e MARR trovando un risparmio del <strong>-13.3%</strong> sul Riso Carnaroli.
+              </p>
+              <button onclick="openOwnerTab('procurement')" class="w-full py-2 rounded-xl bg-[var(--card)] border border-[var(--border)] font-semibold">
+                Approva Ordine Smart Broker →
+              </button>
+            </div>
+
+            <div class="bento-subtle p-4 space-y-2.5">
+              <div class="font-bold text-sm text-rose-400">⭐ Alert Reputazione vs Margini</div>
+              <p class="text-[var(--muted-foreground)]">
+                <strong>Trappola di Margine rilevata:</strong> La <em>Tagliata di Entrecôte</em> ha un margine alto (€ 20,20) ma il rating recensioni è sceso a <strong>3.2★</strong> dopo l'ultimo lotto fornitore.
+              </p>
+              <button onclick="openOwnerTab('marketgaps')" class="w-full py-2 rounded-xl bg-[var(--card)] border border-[var(--border)] font-semibold">
+                Ispeziona Sentiment-to-Margin →
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- OWNER TAB 2: MAGAZZINO, RICETTE BoM & ZERO-EFFORT UoM CONVERTER -->
+        <section id="oview-inventory" class="owner-section hidden space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-[var(--border)]">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-wider text-rose-400">Back-Office Magazzino + Market Gap #3 (Zero-Effort UoM)</div>
+              <h2 class="text-base font-bold">2. Giacenze al Grammo, Lotti FEFO & Convertitore Automatico Fattura (Casse → Kg/Grammi)</h2>
+            </div>
+            <button onclick="runZeroEffortInvoiceConversion()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white text-xs font-semibold shadow-sm">
+              🪄 Converti Fattura XML (2 Casse × 6 Confezioni → +12 kg Riso)
+            </button>
+          </div>
+          <div id="owner-inv-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 text-xs"></div>
+        </section>
+
+        <!-- OWNER TAB 3: PROCUREMENT ESTERNO & AI MULTI-VENDOR PRICE BROKER -->
+        <section id="oview-procurement" class="owner-section hidden space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-[var(--border)]">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-wider text-indigo-400">Outward Supply Chain + Market Gap #2 (AI Price Broker & Meteo)</div>
+              <h2 class="text-base font-bold">3. Procurement Fornitori Esterni con Confronto Listini Live & Previsione Meteo/Prenotazioni</h2>
+            </div>
+            <button onclick="executeAiBrokerPo()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 text-white text-xs font-semibold shadow-sm">
+              🤖 Esegui Ordine con AI Broker (Switch al Fornitore Più Conveniente)
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 text-xs">
+            <div class="lg:col-span-7 bento-subtle p-4 space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-sm">Confronto Listini Fornitori in Tempo Reale (Riso Carnaroli & Zafferano)</span>
+                <span class="px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-400 font-semibold">Meteo Domani: Sole (+10% Coperti Terrazza)</span>
+              </div>
+              <div class="space-y-2">
+                <div class="p-3 rounded-xl bg-[var(--card)] border border-[var(--border)] flex justify-between items-center">
+                  <span>1. <strong>Longino & Cardenal</strong> (Fornitore Abituale) — Riso Carnaroli</span>
+                  <span class="text-[var(--muted-foreground)]">€ 4,50 / kg</span>
+                </div>
+                <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/40 flex justify-between items-center">
+                  <span>2. <strong>MARR Direct EDI</strong> (Consigliato da AI Broker) — Riso Carnaroli DOP</span>
+                  <span class="font-bold text-emerald-400">€ 3,90 / kg (Risparmio -13.3%)</span>
+                </div>
+              </div>
+              <div id="owner-po-history" class="space-y-2 pt-2 border-t border-[var(--border)]"></div>
+            </div>
+
+            <div class="lg:col-span-5 bento-subtle p-4 space-y-2.5">
+              <div class="font-bold text-sm text-rose-400">Riconciliazione Fatture Elettroniche SDI</div>
+              <p class="text-[var(--muted-foreground)]">Controllo automatico tra Prezzo Ordine (PO), Bolla di Consegna (DDT) e Fattura XML Agenzia delle Entrate:</p>
+              <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30">
+                <div class="font-bold text-rose-400">Fattura XML #SDI-9921 • Metro Italia</div>
+                <div class="text-[var(--muted-foreground)] mt-1">Anomalia rilevata: Burro di Normandia fatturato a € 9,97/kg invece di € 9,20/kg (+8.4%). Contestazione pre-compilata.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- OWNER TAB 4: FINANZA P&L LIVE, CASHFLOW, SDI & HR -->
+        <section id="oview-finance" class="owner-section hidden space-y-4">
+          <div class="pb-3 border-b border-[var(--border)]">
+            <div class="text-xs font-semibold uppercase tracking-wider text-emerald-400">Direzione Finanziaria CFO • Contabilità Analitica in Tempo Reale</div>
+            <h2 class="text-base font-bold">4. Conto Economico (Food Cost Teorico vs Reale), Prime Cost & Flusso di Cassa</h2>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
+            <div class="bento-subtle p-4 space-y-2" id="owner-pnl-table"></div>
+            <div class="bento-subtle p-4 space-y-2.5">
+              <div class="font-bold text-sm">👥 Controllo Costo del Lavoro (HR Turni Attivi: 28.6%)</div>
+              <div class="p-3 rounded-xl bg-[var(--card)] border border-[var(--border)] flex justify-between">
+                <span>Brigata Cucina (4 risorse in turno)</span><span class="font-bold">€ 540,00 / gg</span>
+              </div>
+              <div class="p-3 rounded-xl bg-[var(--card)] border border-[var(--border)] flex justify-between">
+                <span>Brigata Sala (5 risorse in turno)</span><span class="font-bold">€ 438,00 / gg</span>
+              </div>
+              <div class="p-3 rounded-xl bg-sky-500/10 border border-sky-500/30 flex justify-between">
+                <span>Produttività Oraria Sala/Cucina (Ricavi / Ore Lavorate)</span><span class="font-bold text-sky-400">€ 61,07 / ora (Ottimo)</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- OWNER TAB 5: I 5 MARKET GAP AI (WHAT COMPETITORS CANNOT DO) -->
+        <section id="oview-marketgaps" class="owner-section hidden space-y-4">
+          <div class="pb-3 border-b border-[var(--border)]">
+            <div class="text-xs font-semibold uppercase tracking-wider text-amber-400">Competitive Moat • Perché questo ERP batte Toast, MarketMan, Choco e R365</div>
+            <h2 class="text-base font-bold">5. Market Gap AI Suite — Le 5 Funzioni che mancano alle altre App sul mercato</h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <!-- GAP 1 -->
+            <div class="bento-subtle p-4 space-y-2 border border-amber-500/30">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-sm text-amber-400">GAP #1 • Sentiment-to-Margin Matrix™</span>
+                <span class="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-bold">1 Margin Trap</span>
+              </div>
+              <p class="text-[var(--muted-foreground)]">
+                Le altre app guardano solo il Food Cost. Noi incrociamo il margine del piatto con le recensioni Google/TheFork:
+              </p>
+              <div class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] space-y-1">
+                <div class="flex justify-between font-semibold">
+                  <span>🥩 Tagliata di Entrecôte (Margine: € 20,20 • Food Cost 22%)</span>
+                  <span class="text-rose-400">Rating: 3.2★ ▼</span>
+                </div>
+                <div class="text-[var(--muted-foreground)]">Causa rilevata dall'AI: 4 recensioni citano <em>"carne fibrosa"</em> dopo il passaggio al lotto economico LOT-88.</div>
+              </div>
+            </div>
+
+            <!-- GAP 2 -->
+            <div class="bento-subtle p-4 space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-sm text-indigo-400">GAP #2 • AI Multi-Vendor Broker + Meteo Forecast</span>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-bold">Attivo</span>
+              </div>
+              <p class="text-[var(--muted-foreground)]">
+                Invece di riordinare alla cieca dallo stesso fornitore, l'AI confronta i cataloghi B2B live e adatta le quantità al meteo e alle prenotazioni del weekend.
+              </p>
+              <button onclick="openOwnerTab('procurement')" class="w-full py-2 rounded-xl bg-[var(--card)] border border-[var(--border)] font-semibold">
+                Vai al Simulatore AI Broker →
+              </button>
+            </div>
+
+            <!-- GAP 3 -->
+            <div class="bento-subtle p-4 space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-sm text-sky-400">GAP #3 • Zero-Effort UoM Invoice Converter</span>
+                <span class="px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-400 font-bold">Zero Data-Entry</span>
+              </div>
+              <p class="text-[var(--muted-foreground)]">
+                Elimina il lavoro manuale dello chef: converte automaticamente le fatture XML in Casse/Colli direttamente in grammi/porzioni della ricetta.
+              </p>
+              <button onclick="openOwnerTab('inventory')" class="w-full py-2 rounded-xl bg-[var(--card)] border border-[var(--border)] font-semibold">
+                Prova Conversione Automatica Casse → Kg
+              </button>
+            </div>
+
+            <!-- GAP 4 & 5 -->
+            <div class="bento-subtle p-4 space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-sm text-emerald-400">GAP #4 & #5 • Warm AI Sommelier QR & 1-Tap Kitchen KDS</span>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-bold">+22% Scontrino</span>
+              </div>
+              <p class="text-[var(--muted-foreground)]">
+                Il menu QR non è un PDF freddo ma suggerisce il calice perfetto in base alla cantina reale; in cucina lo chef registra sfridi o sostituzioni con 1 solo tocco.
+              </p>
+              <button onclick="switchEnvironment('ops')" class="w-full py-2 rounded-xl bg-[var(--card)] border border-[var(--border)] font-semibold">
+                Provalo ora nell'App Operativa Sala & Cucina →
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- ENVIRONMENT 2: ⚡ OPERATIONAL SALA, QR & KITCHEN KDS APP (Field Use)     -->
+    <!-- ======================================================================= -->
+    <div id="plane-ops" class="hidden flex-col md:flex-row">
+
+      <!-- Left Operational Sidebar (Focused strictly on Sala, QR & Kitchen) -->
+      <aside class="w-full md:w-60 shrink-0 bg-[var(--secondary)]/45 border-b md:border-b-0 md:border-r border-[var(--border)] p-4 flex flex-col justify-between">
+        <div class="space-y-4">
+          <div class="p-3 rounded-2xl bg-[var(--card)] border border-emerald-500/30 flex items-center justify-between">
+            <div>
+              <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Field Operations App</div>
+              <div class="text-sm font-bold mt-0.5">Sala, QR & Cucina</div>
+              <div class="text-xs text-[var(--muted-foreground)]">Zero-Distrazione • Dati Finanziari Nascosti</div>
+            </div>
+          </div>
+
+          <div class="space-y-1.5 text-xs">
+            <div class="px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Postazioni Operative</div>
+
+            <button onclick="openOpsTab('qrmenu')" id="opstab-qrmenu" class="ops-nav-btn ops-nav-active w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between apple-spring">
+              <span>📱 1. Menu QR + AI Sommelier</span>
+              <span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold">Cliente</span>
+            </button>
+
+            <button onclick="openOpsTab('waiter')" id="opstab-waiter" class="ops-nav-btn w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between apple-spring text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+              <span>🤵 2. Palmarino Cameriere</span>
+              <span class="px-1.5 py-0.5 rounded bg-[var(--card)] border border-[var(--border)]">Sala</span>
+            </button>
+
+            <button onclick="openOpsTab('kds')" id="opstab-kds" class="ops-nav-btn w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between apple-spring text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+              <span>👨‍🍳 3. Monitor KDS Cucina</span>
+              <span id="ops-badge-kds" class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">3</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-6 p-3 rounded-2xl bg-[var(--card)] border border-[var(--border)] text-xs space-y-2">
+          <div class="text-[var(--muted-foreground)]">Sincronizzato con Admin ERP:</div>
+          <button onclick="switchEnvironment('owner')" class="w-full py-2 px-3 rounded-xl bg-[var(--secondary)] border border-[var(--border)] font-semibold hover:border-sky-500/50 apple-spring">
+            👑 Torna a Vista Owner Admin →
+          </button>
+        </div>
+      </aside>
+
+      <!-- Right Operational Stage -->
+      <main class="flex-1 p-4 md:p-6 space-y-4">
+
+        <!-- OPS VIEW 1: CLIENT QR MENU + WARM AI SOMMELIER (MARKET GAP #4) -->
+        <section id="opsview-qrmenu" class="ops-section space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-[var(--border)]">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-wider text-emerald-400">Esperienza Cliente al Tavolo • Market Gap #4 (Warm AI Sommelier)</div>
+              <h2 class="text-base font-bold">Menu Digitale QR (Tavolo 04 Veranda) — Abbinamento Vino AI & Invio Diretto in Cucina</h2>
+            </div>
+            <span id="ops-saffron-status" class="text-xs px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-semibold">
+              ● Disponibilità Magazzino Verificata in Tempo Reale
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 text-xs">
+            <div class="lg:col-span-7 space-y-3">
+              <div class="bento-subtle p-4 space-y-2 border border-sky-500/40">
+                <div class="flex justify-between items-center">
+                  <span class="font-bold text-sm">Risotto Oro & Zafferano DOP 36 Mesi</span>
+                  <span class="font-bold text-sm">€ 28,00</span>
+                </div>
+                <p class="text-[var(--muted-foreground)]">Riso Carnaroli Riserva mantecato al Parmigiano Reggiano 36 mesi e pistilli di Zafferano DOP.</p>
+                <div class="text-amber-400 font-medium">Allergeni UE 1169/2011: Latte / Lattosio</div>
+              </div>
+
+              <!-- Warm AI Sommelier Pairing Box (Market Gap #4) -->
+              <div class="p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-sky-500/10 border border-indigo-500/30 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-indigo-400">🍷 Consiglio del Sommelier AI (Cantina Live: 14 Bottiglie)</span>
+                  <label class="flex items-center gap-1.5 cursor-pointer font-semibold">
+                    <input type="checkbox" id="sommelier-upsell-chk" checked class="rounded" />
+                    <span>Aggiungi Calice (+€ 12,00)</span>
+                  </label>
+                </div>
+                <p class="text-[var(--muted-foreground)]">
+                  Per esaltare la nota aromatica dello Zafferano DOP ti consigliamo un calice di <strong>Franciacorta Satèn DOCG Bellavista</strong> servito a 8°C.
+                </p>
+              </div>
+            </div>
+
+            <div class="lg:col-span-5 bento-subtle p-4 flex flex-col justify-between space-y-3">
+              <div>
+                <div class="font-bold text-sm mb-2">Riepilogo Ordine QR • Tavolo 04</div>
+                <div class="space-y-1.5 text-[var(--muted-foreground)]">
+                  <div class="flex justify-between"><span>1x Risotto Oro & Zafferano 36m</span><span class="font-semibold text-[var(--foreground)]">€ 28,00</span></div>
+                  <div class="flex justify-between"><span>1x Calice Franciacorta Satèn (Upsell AI)</span><span class="font-semibold text-emerald-400">€ 12,00</span></div>
+                </div>
+              </div>
+              <button onclick="placeOperationalQrOrder()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold text-xs shadow-sm">
+                 Pay • Invia Comanda al KDS Cucina & Aggiorna ERP Owner
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- OPS VIEW 2: PALMARINO CAMERIERE (GESTIONE TAVOLI & MARCIA) -->
+        <section id="opsview-waiter" class="ops-section hidden space-y-4">
+          <div class="pb-3 border-b border-[var(--border)]">
+            <div class="text-xs font-semibold uppercase tracking-wider text-sky-400">App Sala • Controllo Marcia & Chiamata Piatti</div>
+            <h2 class="text-base font-bold">Palmarino Cameriere — Stato Tavoli & Sincronizzazione Marcia con la Cucina</h2>
+          </div>
+          <div id="ops-waiter-tables" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 text-xs"></div>
+        </section>
+
+        <!-- OPS VIEW 3: KITCHEN DISPLAY SYSTEM (KDS) + 1-TAP HANDS-FREE WASTE (MARKET GAP #5) -->
+        <section id="opsview-kds" class="ops-section hidden space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-[var(--border)]">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-wider text-amber-400">Monitor Touch Cucina • Market Gap #5 (1-Tap Hands-Free Waste & Substitution)</div>
+              <h2 class="text-base font-bold">Kitchen Display System (KDS) — Comande Attive & Pulsanti Grandi per Mani Impegnate</h2>
+            </div>
+            <button onclick="oneTapKitchenWaste()" class="px-3.5 py-2 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/40 text-xs font-bold">
+              🎙️ 1-Tap Sfrido Rapido (-200g Parmigiano → Sincronizza P&L Owner)
+            </button>
+          </div>
+          <div id="ops-kds-grid" class="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs"></div>
+        </section>
+
+      </main>
+    </div>
+
+  </div>
+
+  <script>
+    const app = {
+      env: 'owner',
+      ownerTab: 'tower',
+      opsTab: 'qrmenu',
+      revenue: 3420.00,
+      theoCogs: 848.16,
+      waste: 22.00,
+      aiSaved: 142.50,
+      labor: 978.00,
+      opex: 442.00,
+      ingredients: [
+        { id: 'ING-RISO', name: 'Riso Carnaroli Riserva', stock: 3.20, min: 5.00, par: 25.00, unit: 'kg', cost: 4.50, lot: 'LOT-26-A1', supplier: 'Longino & Cardenal' },
+        { id: 'ING-ZAFF', name: 'Zafferano DOP in Pistilli', stock: 1.50, min: 5.00, par: 20.00, unit: 'g', cost: 12.00, lot: 'LOT-26-Z9', supplier: 'Longino & Cardenal' },
+        { id: 'ING-PARM', name: 'Parmigiano Reggiano 36m', stock: 6.40, min: 3.00, par: 15.00, unit: 'kg', cost: 22.00, lot: 'LOT-26-P4', supplier: 'Metro Italia Pro' }
+      ],
+      tables: [
+        { code: 'T-01', zone: 'Sala', covers: '2/2', status: 'SECONDI IN MARCIA', bill: 84.00 },
+        { code: 'T-02', zone: 'Sala', covers: '2/4', status: 'ATTESA PRIMI', bill: 60.00 },
+        { code: 'T-04', zone: 'Veranda', covers: '4/4', status: 'QR ORDINE ATTIVO', bill: 136.00 },
+        { code: 'T-08', zone: 'Chef Table', covers: '6/6', status: 'DEGUSTAZIONE', bill: 340.00 }
+      ],
+      kds: [
+        { id: 'KDS-301', table: 'T-08', station: 'Garde Manger', dish: 'Battuta di Fassona & Tartufo', status: 'IN PREPARAZIONE', time: '03:40' },
+        { id: 'KDS-302', table: 'T-04', station: 'Partita Primi', dish: 'Risotto Oro & Zafferano 36m', status: 'NUOVA DA QR', time: '00:50' },
+        { id: 'KDS-303', table: 'T-02', station: 'Partita Primi', dish: 'Risotto Oro & Zafferano 36m', status: 'PRONTO AL PASS ✓', time: '06:20' }
+      ],
+      pos: [
+        { po: 'PO-2026-101', supplier: 'Longino & Cardenal', detail: 'Ordine standard pre-ottimizzazione', total: 320.10, status: 'IN REVISIONE AI' }
+      ]
+    };
+
+    function toast(msg) {
+      const t = document.getElementById('global-toast');
+      document.getElementById('global-toast-text').textContent = msg;
+      t.classList.remove('hidden');
+    }
+
+    function switchEnvironment(env) {
+      app.env = env;
+      const pOwner = document.getElementById('plane-owner');
+      const pOps = document.getElementById('plane-ops');
+      const bOwner = document.getElementById('env-btn-owner');
+      const bOps = document.getElementById('env-btn-ops');
+
+      if (env === 'owner') {
+        pOwner.classList.remove('hidden');
+        pOwner.classList.add('flex');
+        pOps.classList.add('hidden');
+        pOps.classList.remove('flex');
+        bOwner.classList.add('role-pill-active');
+        bOwner.classList.remove('text-[var(--muted-foreground)]');
+        bOps.classList.remove('role-pill-active');
+        bOps.classList.add('text-[var(--muted-foreground)]');
+      } else {
+        pOps.classList.remove('hidden');
+        pOps.classList.add('flex');
+        pOwner.classList.add('hidden');
+        pOwner.classList.remove('flex');
+        bOps.classList.add('role-pill-active');
+        bOps.classList.remove('text-[var(--muted-foreground)]');
+        bOwner.classList.remove('role-pill-active');
+        bOwner.classList.add('text-[var(--muted-foreground)]');
+      }
+      renderAllViews();
+    }
+
+    function setFormat(fmt) {
+      const shell = document.getElementById('master-shell');
+      shell.classList.remove('vp-desktop', 'vp-tablet', 'vp-mobile');
+      shell.classList.add('vp-' + fmt);
+      ['desktop', 'tablet', 'mobile'].forEach(k => {
+        const b = document.getElementById('fmt-' + k);
+        b.className = k === fmt
+          ? 'px-2.5 py-1 rounded-lg font-semibold bg-[var(--card)] text-[var(--foreground)] shadow-sm'
+          : 'px-2.5 py-1 rounded-lg text-[var(--muted-foreground)]';
+      });
+    }
+
+    function openOwnerTab(tab) {
+      app.ownerTab = tab;
+      document.querySelectorAll('.owner-section').forEach(s => s.classList.add('hidden'));
+      document.getElementById('oview-' + tab).classList.remove('hidden');
+      document.querySelectorAll('.owner-nav-btn').forEach(b => b.classList.remove('owner-nav-active'));
+      document.getElementById('otab-' + tab).classList.add('owner-nav-active');
+      renderAllViews();
+    }
+
+    function openOpsTab(tab) {
+      app.opsTab = tab;
+      document.querySelectorAll('.ops-section').forEach(s => s.classList.add('hidden'));
+      document.getElementById('opsview-' + tab).classList.remove('hidden');
+      document.querySelectorAll('.ops-nav-btn').forEach(b => b.classList.remove('ops-nav-active'));
+      document.getElementById('opstab-' + tab).classList.add('ops-nav-active');
+      renderAllViews();
+    }
+
+    function placeOperationalQrOrder() {
+      const zaff = app.ingredients.find(i => i.id === 'ING-ZAFF');
+      const riso = app.ingredients.find(i => i.id === 'ING-RISO');
+      if (zaff.stock < 0.5) {
+        toast('⚠️ Auto-86 Attivo: Zafferano esaurito! L\'Owner deve approvare il riordino nel pannello Admin.');
+        return;
+      }
+      zaff.stock = +(zaff.stock - 0.5).toFixed(2);
+      riso.stock = +(riso.stock - 0.08).toFixed(2);
+
+      const upsell = document.getElementById('sommelier-upsell-chk').checked;
+      const orderPrice = upsell ? 40.00 : 28.00;
+      const orderCost = upsell ? 10.44 : 7.24;
+
+      app.revenue = +(app.revenue + orderPrice).toFixed(2);
+      app.theoCogs = +(app.theoCogs + orderCost).toFixed(2);
+
+      const t4 = app.tables.find(t => t.code === 'T-04');
+      if (t4) t4.bill = +(t4.bill + orderPrice).toFixed(2);
+
+      const newId = 'KDS-' + (301 + app.kds.length);
+      app.kds.unshift({
+        id: newId,
+        table: 'T-04 (QR)',
+        station: 'Partita Primi',
+        dish: upsell ? 'Risotto Oro + Calice Satèn (AI Upsell)' : 'Risotto Oro & Zafferano 36m',
+        status: 'NUOVA DA QR',
+        time: '00:01'
+      });
+
+      toast(`✅ Comanda ${newId} (€ ${orderPrice.toFixed(2)}) inviata al KDS Cucina e sincronizzata con Magazzino e P&L dell'Owner!`);
+      renderAllViews();
+    }
+
+    function advanceOpsKds(idx) {
+      const k = app.kds[idx];
+      if (!k) return;
+      if (k.status.includes('NUOVA')) k.status = 'IN PREPARAZIONE';
+      else if (k.status === 'IN PREPARAZIONE') k.status = 'PRONTO AL PASS ✓';
+      else app.kds.splice(idx, 1);
+      renderAllViews();
+    }
+
+    function oneTapKitchenWaste() {
+      const parm = app.ingredients.find(i => i.id === 'ING-PARM');
+      parm.stock = Math.max(0, +(parm.stock - 0.2).toFixed(2));
+      app.waste = +(app.waste + 4.40).toFixed(2);
+      toast('🎙️ 1-Tap Kitchen Waste registrato (-200g Parmigiano = € 4,40). Il Food Cost Reale nel pannello Owner è stato aggiornato!');
+      renderAllViews();
+    }
+
+    function runZeroEffortInvoiceConversion() {
+      const riso = app.ingredients.find(i => i.id === 'ING-RISO');
+      riso.stock = +(riso.stock + 12.0).toFixed(2);
+      riso.cost = 4.00;
+      toast('🪄 Market Gap #3: Fattura XML (2 Casse × 6 Confezioni da 1kg) convertita automaticamente in +12.00 kg a magazzino (€ 4,00/kg)!');
+      renderAllViews();
+    }
+
+    function executeAiBrokerPo() {
+      const riso = app.ingredients.find(i => i.id === 'ING-RISO');
+      const zaff = app.ingredients.find(i => i.id === 'ING-ZAFF');
+      riso.stock = 25.00;
+      riso.cost = 3.90;
+      zaff.stock = 20.00;
+      app.aiSaved = +(app.aiSaved + 34.80).toFixed(2);
+      app.pos.unshift({
+        po: 'PO-AI-0099',
+        supplier: 'MARR Direct EDI (Selezionato da AI Broker)',
+        detail: 'Switch automatico fornitore (-13.3% costo unitario) + Fattore Meteo Sole (+10%)',
+        total: 268.40,
+        status: 'APPROVATO & SCORTE RIPRISTINATE'
+      });
+      toast('🤖 AI Multi-Vendor Broker ha inviato l\'ordine al fornitore più economico (MARR Direct @ € 3,90/kg) e ripristinato le scorte!');
+      renderAllViews();
+    }
+
+    function renderAllViews() {
+      const actualCogs = app.theoCogs + app.waste;
+      const theoPct = ((app.theoCogs / app.revenue) * 100).toFixed(1);
+      const actualPct = ((actualCogs / app.revenue) * 100).toFixed(1);
+      const ebitda = (app.revenue - actualCogs - app.labor - app.opex).toFixed(2);
+      const lowStock = app.ingredients.filter(i => i.stock <= i.min).length;
+
+      document.getElementById('own-kpi-rev').textContent = `€ ${app.revenue.toLocaleString('it-IT', { minimumFractionDigits: 2 })}`;
+      document.getElementById('own-kpi-fc').innerHTML = `${theoPct}% <span class="text-xs font-normal text-[var(--muted-foreground)]">/ ${actualPct}%</span>`;
+      document.getElementById('own-kpi-cogs').textContent = `COGS: € ${app.theoCogs.toFixed(2)} • Sfridi: € ${app.waste.toFixed(2)}`;
+      document.getElementById('own-kpi-saved').textContent = `€ ${app.aiSaved.toFixed(2)}`;
+      document.getElementById('own-kpi-ebitda').textContent = `€ ${(+ebitda).toLocaleString('it-IT', { minimumFractionDigits: 2 })}`;
+
+      document.getElementById('obadge-stock').textContent = `${lowStock} Alert`;
+      document.getElementById('ops-badge-kds').textContent = app.kds.length;
+      document.getElementById('tower-kds-count').textContent = `${app.kds.length} comande`;
+
+      // Owner Inventory Grid
+      const invGrid = document.getElementById('owner-inv-grid');
+      if (invGrid) {
+        invGrid.innerHTML = app.ingredients.map(i => {
+          const low = i.stock <= i.min;
+          const pct = Math.min(100, Math.round((i.stock / i.par) * 100));
+          return `
+            <div class="bento-subtle p-4 space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-sm">${i.name} (${i.lot})</span>
+                <span class="px-2 py-0.5 rounded-full font-semibold ${low ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/15 text-emerald-400'}">
+                  ${low ? 'SOTTO SCORTA' : 'PAR LEVEL OK'}
+                </span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-[var(--card)] overflow-hidden">
+                <div class="h-full ${low ? 'bg-rose-500' : 'bg-emerald-500'}" style="width: ${pct}%"></div>
+              </div>
+              <div class="flex justify-between text-[var(--muted-foreground)]">
+                <span>Giacenza: <strong class="text-[var(--foreground)]">${i.stock.toFixed(2)} ${i.unit}</strong> / Par ${i.par}${i.unit}</span>
+                <span>Costo: <strong>€ ${i.cost.toFixed(2)}/${i.unit}</strong> (${i.supplier})</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Owner PO History
+      const poHist = document.getElementById('owner-po-history');
+      if (poHist) {
+        poHist.innerHTML = app.pos.map(p => `
+          <div class="p-3 rounded-xl bg-[var(--card)] border border-[var(--border)] flex justify-between items-center">
+            <div>
+              <div class="font-bold">${p.po} • ${p.supplier}</div>
+              <div class="text-[var(--muted-foreground)]">${p.detail}</div>
+            </div>
+            <span class="font-bold text-indigo-400">€ ${p.total.toFixed(2)}</span>
+          </div>
+        `).join('');
+      }
+
+      // Owner P&L Table
+      const pnlTbl = document.getElementById('owner-pnl-table');
+      if (pnlTbl) {
+        pnlTbl.innerHTML = `
+          <div class="font-bold text-sm mb-1">Conto Economico Giornaliero (Owner Live P&L)</div>
+          <div class="flex justify-between p-2.5 rounded-xl bg-[var(--card)]"><span>(+) Ricavi Sala & QR</span><span class="font-bold text-emerald-500">€ ${app.revenue.toFixed(2)}</span></div>
+          <div class="flex justify-between p-2.5 rounded-xl bg-[var(--card)]"><span>(-) Food Cost Teorico (Ricette)</span><span>- € ${app.theoCogs.toFixed(2)} (${theoPct}%)</span></div>
+          <div class="flex justify-between p-2.5 rounded-xl bg-[var(--card)]"><span>(-) Sfridi Registrati da KDS Cucina</span><span class="text-rose-400">- € ${app.waste.toFixed(2)}</span></div>
+          <div class="flex justify-between p-2.5 rounded-xl bg-[var(--card)]"><span>(-) Costo Brigata Sala/Cucina</span><span>- € ${app.labor.toFixed(2)}</span></div>
+          <div class="flex justify-between p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 font-bold text-sm">
+            <span>(=) EBITDA / Utile Operativo Netto</span><span class="text-emerald-500">€ ${ebitda}</span>
+          </div>
+        `;
+      }
+
+      // Ops Waiter Tables
+      const wTables = document.getElementById('ops-waiter-tables');
+      if (wTables) {
+        wTables.innerHTML = app.tables.map(t => `
+          <div class="bento-subtle p-4 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-sm">${t.code} • ${t.zone}</span>
+              <span class="px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-400 font-semibold">${t.covers}</span>
+            </div>
+            <div class="text-emerald-400 font-semibold">${t.status}</div>
+            <div class="pt-2 border-t border-[var(--border)] flex justify-between">
+              <span class="text-[var(--muted-foreground)]">Conto Aperto:</span>
+              <span class="font-bold">€ ${t.bill.toFixed(2)}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Ops KDS Grid
+      const kGrid = document.getElementById('ops-kds-grid');
+      if (kGrid) {
+        kGrid.innerHTML = app.kds.map((k, idx) => `
+          <div class="bento-subtle p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="font-bold text-sky-400">${k.id} • ${k.table}</span>
+                <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">${k.status}</span>
+              </div>
+              <div class="text-[var(--muted-foreground)]">${k.station} • Timer: ${k.time}</div>
+              <div class="text-sm font-bold mt-1.5">1x ${k.dish}</div>
+            </div>
+            <button onclick="advanceOpsKds(${idx})" class="w-full py-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] font-bold hover:border-emerald-500/50">
+              Avanza Marcia Piatto →
+            </button>
+          </div>
+        `).join('');
+      }
+    }
+
+    renderAllViews();
+  </script>
+</body>
+</html>
