@@ -1,0 +1,41 @@
+{
+  "project": "Prototype Food ERP",
+  "version": "3.0.0",
+  "domain": "FoodTech / HoReCa — Dual-Role Architecture (Owner Admin ERP + Operational Sala/KDS/QR) & Market Gap Differentiators",
+  "workspaceRoot": "C:/Users/lucap/.gemini/antigravity/scratch/Prototype Food ERP",
+  "architecturalPlanes": {
+    "Plane1_OwnerAdminControl": {
+      "targetUsers": ["Restaurant Owner", "General Manager", "CFO / Controller", "Purchasing Manager"],
+      "devices": ["Desktop Web ERP", "iPad Pro Executive", "iPhone Owner App"],
+      "leftSidebarModules": [
+        "1. Executive Control Tower (360° Live Telemetry)",
+        "2. Magazzino, Lotti FEFO & Zero-Effort UoM Converter",
+        "3. Procurement Esterno B2B & AI Multi-Vendor Price Broker",
+        "4. Finanza, Conto Economico (P&L), Cashflow & Fatture XML SDI",
+        "5. Market Gap AI Suite (Sentiment-to-Margin Matrix, Meteo Forecast & Dynamic Substitution)"
+      ]
+    },
+    "Plane2_OperationalApp": {
+      "targetUsers": ["Waitstaff (Sala)", "Kitchen Brigade (Chef/Partite)", "Table Guests (QR Self-Ordering)"],
+      "devices": ["iPhone QR Guest Menu", "Palmarino Cameriere", "iPad Pro Kitchen Display System (KDS)"],
+      "operationalViews": [
+        "A. QR Table Menu + Warm AI Sommelier Upselling & Split-Bill Apple Pay",
+        "B. Sala Floor Plan & Rapid Waiter Order Pad (Gestione Marcia)",
+        "C. Kitchen Display System (KDS) Multi-Partita + 1-Tap Hands-Free Waste & Substitution"
+      ]
+    }
+  },
+  "marketGapFeatures": [
+    "GAP-01: Sentiment-to-Margin Matrix (correlates Google/TheFork review NLP sentiment with Dish Food Cost & Supplier Lot changes)",
+    "GAP-02: AI Multi-Vendor Price Broker & Weather/Booking Demand Forecaster (auto-switches supplier catalog for lowest unit price)",
+    "GAP-03: Zero-Effort UoM Case-to-Gram Converter (maps supplier case/pack invoices directly to recipe gram deductions)",
+    "GAP-04: Warm AI Sommelier Pairing in QR Menu (increases average QR ticket size by +22% using real-time cellar stock)",
+    "GAP-05: 1-Tap Hands-Free Kitchen Waste & Dynamic Ingredient Substitution on KDS"
+  ],
+  "testPlan": [
+    "TC-01 to TC-08: Core ERP, QR-to-KDS, BoM, Auto-86, Procurement, SDI Variance, Floor Plan, Waste & HACCP",
+    "TC-09: AI Multi-Vendor Price Broker selects best supplier quote and adjusts order quantity by Weather/Booking demand factor",
+    "TC-10: Sentiment-to-Margin Matrix flags High-Margin / Low-Review-Sentiment dishes ('Margin Trap') and resolves supplier lot issue",
+    "TC-11: Zero-Effort UoM Converter translates Supplier Cases (Colli/Casse) into Recipe Grams/ml accurately"
+  ]
+}
